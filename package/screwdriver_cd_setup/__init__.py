@@ -7,9 +7,9 @@ from __future__ import print_function
 import getpass
 import json
 import os
+import shutil
 import socket
 import sys
-import distutils.spawn
 from string import Template
 from subprocess import check_output, call, STDOUT, CalledProcessError
 try:
@@ -240,7 +240,7 @@ def check_component(component):
     """
     Search for a component executable and exit if not found
     """
-    if distutils.spawn.find_executable(component) is None:
+    if shutil.which(component) is None:
         print(
             '💀   Could not find {0}, please install and set path to '
             '{0}'.format(component)
