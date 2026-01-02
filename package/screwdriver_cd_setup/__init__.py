@@ -236,16 +236,34 @@ def generate_scm_config(scm_plugin, ip): # pylint: disable=C0103
     return dict(scm_config=json.dumps(scm_config), avatar=avatar)
 
 
+def get_expanded_path():
+    """
+    Get PATH with tildes expanded to full paths.
+    This is needed because Rancher Desktop and similar tools may add
+    paths like ~/.rd/bin to PATH, but subprocess won't expand the tilde.
+    """
+    path = os.environ.get('PATH', os.defpath)
+    return os.pathsep.join(
+        os.path.expanduser(p) for p in path.split(os.pathsep)
+    )
+
+
+def get_expanded_env():
+    """
+    Get a copy of the environment with PATH expanded.
+    Use this when calling subprocess functions to ensure executables
+    in paths like ~/.rd/bin can be found.
+    """
+    env = os.environ.copy()
+    env['PATH'] = get_expanded_path()
+    return env
+
+
 def check_component(component):
     """
     Search for a component executable and exit if not found
     """
-    # Expand tildes in PATH since shutil.which doesn't do this automatically
-    path = os.environ.get('PATH', os.defpath)
-    expanded_path = os.pathsep.join(
-        os.path.expanduser(p) for p in path.split(os.pathsep)
-    )
-    if shutil.which(component, path=expanded_path) is None:
+    if shutil.which(component, path=get_expanded_path()) is None:
         print(
             '💀   Could not find {0}, please install and set path to '
             '{0}'.format(component)
@@ -291,9 +309,10 @@ def main():
     )
     prompt = get_input('    Would you like to run them now? (y/n) ')
     if prompt.lower() == 'y':
-        call(['docker', 'pull', 'screwdrivercd/launcher:stable'])
-        call(['docker-compose', 'pull'])
-        call(['docker-compose', '-p', 'screwdriver', 'up', '-d'])
+        env = get_expanded_env()
+        call(['docker', 'pull', 'screwdrivercd/launcher:stable'], env=env)
+        call(['docker-compose', 'pull'], env=env)
+        call(['docker-compose', '-p', 'screwdriver', 'up', '-d'], env=env)
         try:
             call(['open', Template('http://${ip}:9000').safe_substitute(fields)])
         except (CalledProcessError, FileNotFoundError):
