@@ -240,7 +240,12 @@ def check_component(component):
     """
     Search for a component executable and exit if not found
     """
-    if shutil.which(component) is None:
+    # Expand tildes in PATH since shutil.which doesn't do this automatically
+    path = os.environ.get('PATH', os.defpath)
+    expanded_path = os.pathsep.join(
+        os.path.expanduser(p) for p in path.split(os.pathsep)
+    )
+    if shutil.which(component, path=expanded_path) is None:
         print(
             '💀   Could not find {0}, please install and set path to '
             '{0}'.format(component)
